@@ -17,22 +17,24 @@ class Graphics1D {
     ymax = 5;
     W = 512;
     H = 512;
+    B = 1;
     Fmax = this.ymin; 
     Fmin = this.ymax;
-    f = function (x) { return x*x-9; };
+    f = function (x, b) { return x*x-9; };
     zer = new Map();
     zerocount = 0;
     evaluate() {
         this.buf = new Map();
         this.Fmax = 0; this.Fmin=0;
         for(let x=this.xmin; x<this.xmax; x += (-this.xmin + this.xmax) / this.W) {
-            var res  = this.f(x);
+            var res  = this.f(x, this.B);
             this.buf[x] = res;
             this.Fmax = Math.max(this.Fmax,res);
             this.Fmin = Math.min(this.Fmin,res);
         }
     }
     draw(dots = "red", axis = "lime", zeros = "indigo", gaps = "magenta", bg = "gray") {
+        this.B = parseFloat(document.getElementById("b").value);
         this.evaluate();
         let stepx = this.W / (-this.xmin + this.xmax), stepy = this.H / (-this.ymin + this.ymax),
             zerox = -this.xmin * stepx, zeroy = this.ymax * stepy;
@@ -70,7 +72,7 @@ class Graphics1D {
         ctx.beginPath();
         ctx.lineWidth = 1;
         ctx.strokeStyle = dots;
-        ctx.moveTo(zerox + this.xmin * stepx, zeroy - this.f(this.xmin) * stepy);
+        ctx.moveTo(zerox + this.xmin * stepx, zeroy - this.f(this.xmin, this.B) * stepy);
         console.log("drawing: "+this.ymin+" "+this.ymax);
         this.zerocount = 0;
         this.zer.clear();
@@ -178,7 +180,8 @@ function build() {
     x.xmin = Ixmin;
     x.ymax = Iymax;
     x.ymin = Iymin;
-    x.f = function(x) { return eval(replaceSpecialSequence(If)); } 
+    x.f = function(x, b) { return eval(replaceSpecialSequence(If)); } 
+    x.b = parseFloat(document.getElementById("b").value);
     x.draw();
 }
 
@@ -193,6 +196,7 @@ function InitializeFieldsForBisection() {
     x.xmin = Ixmin;
     x.ymax = Iymax;
     x.ymin = Iymin;
+    x.B = parseFloat(document.getElementById("b").value);
 }
 
 function replaceDerProblems(str) {
@@ -207,7 +211,7 @@ async function Bisection() {
     document.getElementById("derone").style.display = "block";
     let der = math.derivative(replaceDerProblems(document.getElementById("func").value),'x').toString();
     document.getElementById("derholder").innerText = der;
-    let derfunc = math.parser().evaluate("f(x) = "+ document.getElementById("derholder").innerText);
+    let derfunc = math.parser().evaluate("f(x, b) = "+ document.getElementById("derholder").innerText);
     let delay = parseFloat(document.getElementById("wait").value);
     x.f = derfunc; 
     x.draw();
@@ -233,8 +237,8 @@ async function Bisection() {
               break; 
             }
             xnext = (xnow + xnext) / 2;
-            if(derfunc(xnext)==0) break;
-            if (Math.sign(derfunc(xnext)) == Math.sign(derfunc(xnow))) xnow = xnext;   
+            if(derfunc(xnext, x.B)==0) break;
+            if (Math.sign(derfunc(xnext, x.B)) == Math.sign(derfunc(xnow, x.B))) xnow = xnext;   
             
             
             iterations++;
@@ -247,11 +251,11 @@ async function Bisection() {
           await sleep(delay);
             
         }
-        var critical = (derfunc(xnext+0.00001)*derfunc(xnext-0.00001)>0);
+        var critical = (derfunc(xnext+0.00001, x.B)*derfunc(xnext-0.00001, x.B)>0);
        
         if(critical) {
             displayedpoints++;
-            var fnow = function(x) { return eval(replaceSpecialSequence(document.getElementById("func").value)); };
+            var fnow = function(x, b) { return eval(replaceSpecialSequence(document.getElementById("func").value)); };
             document.getElementById("pointsholder").innerText += "x"+displayedpoints+" = "+xnext+ "  f(x) = "+fnow(xnext)+ "  Количество итераций: "+iterations+"\n";
             document.getElementById("status").innerText+="Корень производной ="+xnext+" найден с нужной точностью. Это точка экстремума.";
         } else {
